@@ -109,9 +109,12 @@ jobs:
                   name: client-dist
                   path: dist
             - name: Render Compose configuration
-              run: >-
-                  sed "s|image: \"\${SERVER_IMAGE:-analytics-server}\"|image: \"${SERVER_IMAGE}\"|"
-                  docker-compose.yml > compose.yml
+              run: |
+                  sed "s|image: '\${SERVER_IMAGE:-analytics-server}'|image: '${SERVER_IMAGE}'|" docker-compose.yml > compose.yml
+                  if rg -q 'SERVER_IMAGE' compose.yml; then
+                      echo 'Compose image tag was not rendered.'
+                      exit 1
+                  fi
             - name: Deploy Compose configuration
               run: rsync -az compose.yml "$DEPLOY_USER@$DEPLOY_HOST:$SERVER_PATH/compose.yml"
             - name: Update API
