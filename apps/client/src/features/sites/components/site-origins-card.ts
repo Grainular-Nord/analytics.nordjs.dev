@@ -1,5 +1,5 @@
 import { Card } from '@analytics/ui';
-import { html, on } from '@grainular/nord';
+import { html, mounted, on } from '@grainular/nord';
 import { siteSettingsStore } from '../store/site-settings.store';
 import { sitesStore, type Site } from '../store/sites.store';
 
@@ -31,8 +31,11 @@ export const SiteOriginsCard = ({ site, onMessage }: SiteOriginsCardOptions) => 
                 <textarea
                     class="min-h-20 w-full rounded-xs border border-line bg-surface px-3 py-2 font-mono text-xs outline-none focus:border-accent"
                     name="origins"
-                >
-${site.allowedOrigins.join('\n')}</textarea>
+                    ${mounted((node) => {
+                        (node as HTMLTextAreaElement).value = site.allowedOrigins.join('\n');
+                        return () => {};
+                    })}
+                ></textarea>
                 <button
                     type="submit"
                     class="self-start cursor-pointer rounded-xs bg-accent px-4 py-2 text-sm font-semibold text-white"
