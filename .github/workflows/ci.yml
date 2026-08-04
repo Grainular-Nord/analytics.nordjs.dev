@@ -46,7 +46,6 @@ jobs:
         runs-on: ubuntu-latest
         environment: production
         env:
-            SERVER_IMAGE: ghcr.io/${{ github.repository_owner }}/analytics-server:${{ github.sha }}
             DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
             DEPLOY_USER: ${{ vars.DEPLOY_USER }}
             DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
@@ -54,6 +53,11 @@ jobs:
             RUNTIME_ENV_PATH: ${{ vars.RUNTIME_ENV_PATH }}
         steps:
             - uses: actions/checkout@v4
+            - name: Build image reference
+              id: image
+              run: |
+                  owner="$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+                  echo "server_image=ghcr.io/$owner/analytics-server:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
             - name: Log in to GitHub Container Registry
               uses: docker/login-action@v3
               with:
@@ -66,7 +70,7 @@ jobs:
                   context: .
                   file: apps/server/Dockerfile
                   push: true
-                  tags: ${{ env.SERVER_IMAGE }}
+                  tags: ${{ steps.image.outputs.server_image }}
             - name: Configure SSH
               env:
                   SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
@@ -109,6 +113,8 @@ jobs:
                   name: client-dist
                   path: dist
             - name: Render Compose configuration
+              env:
+                  SERVER_IMAGE: ${{ steps.image.outputs.server_image }}
               run: |
                   sed "s|image: '\${SERVER_IMAGE:-analytics-server}'|image: '${SERVER_IMAGE}'|" docker-compose.yml > compose.yml
                   if rg -q 'SERVER_IMAGE' compose.yml; then
