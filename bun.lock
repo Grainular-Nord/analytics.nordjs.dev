@@ -26,6 +26,7 @@
         "@grainular/router": "^2.1.0",
         "lucide": "1.28.0",
         "tailwindcss": "^4.3.0",
+        "uplot": "1.6.32",
       },
       "devDependencies": {
         "@tailwindcss/vite": "^4.3.3",
