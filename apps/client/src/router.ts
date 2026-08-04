@@ -4,13 +4,18 @@ import { isLoggedIn, isNotAuthenticated } from './lib/auth';
 import { siteDashboardStore } from './features/dashboard/store/site-dashboard.store';
 import { siteSettingsStore } from './features/sites/store/site-settings.store';
 import { sitesStore } from './features/sites/store/sites.store';
-import { summaryStore } from './features/summary/store/summary.store';
 
 export const { query, params, ...router } = createRouter('/', [
     {
         path: '/',
         component: () => import('./features/summary/summary.page'),
-        use: [isLoggedIn(), load(async () => summaryStore.actions.load())],
+        use: [
+            isLoggedIn(),
+            load(async () => {
+                const { summaryStore } = await import('./features/summary/store/summary.store');
+                summaryStore.actions.load();
+            }),
+        ],
     },
     {
         path: '/sites',
