@@ -14,14 +14,17 @@ COPY apps/server/package.json ./apps/server/package.json
 COPY apps/client/package.json ./apps/client/package.json
 # Prisma is needed both to generate the client at build time and to apply
 # migrations at container startup, so it must be present in the runtime image.
-RUN bun install --frozen-lockfile
+# Skip repository lifecycle scripts: Lefthook is for local Git checkouts only.
+RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY packages/db ./packages/db
 COPY packages/auth ./packages/auth
 COPY packages/ui ./packages/ui
 COPY apps/server ./apps/server
 
-RUN cd packages/db && bunx prisma generate
+# Generation does not connect to Postgres, but the Prisma config requires a
+# URL. The real value is supplied by Docker Compose at runtime.
+RUN cd packages/db && DATABASE_URL="postgresql://analytics:placeholder@postgres:5432/analytics" bunx prisma generate
 
 ENV NODE_ENV=production
 WORKDIR /app/apps/server
