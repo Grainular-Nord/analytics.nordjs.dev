@@ -13,7 +13,7 @@
     "lint": "oxlint .",
     "format": "oxfmt . --write",
     "format:check": "oxfmt . --check",
-    "typecheck": "bunx tsc --project apps/server/tsconfig.json && bunx tsc --project apps/client/tsconfig.json && bunx tsc --project packages/auth/tsconfig.json && bunx tsc --project packages/db/tsconfig.json && bunx tsc --project packages/ui/tsconfig.json",
+        "typecheck": "bun run db:generate && tsc --project apps/server/tsconfig.json && tsc --project apps/client/tsconfig.json && tsc --project packages/auth/tsconfig.json && tsc --project packages/db/tsconfig.json && tsc --project packages/ui/tsconfig.json",
     "build": "bun run --filter @analytics/client build",
     "dev:server": "bun run --filter @analytics/server dev",
     "dev:client": "bun run --filter @analytics/client dev",
@@ -27,6 +27,7 @@
     "@commitlint/config-conventional": "^21.2.0",
     "lefthook": "^2.1.10",
     "oxfmt": "^0.60.0",
-    "oxlint": "^1.75.0"
+        "oxlint": "^1.75.0",
+        "typescript": "~6.0.2"
   }
 }
