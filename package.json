@@ -1,0 +1,32 @@
+{
+  "name": "analytics.nordjs.dev",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "prepare": "lefthook install",
+    "ci": "bun run format:check && bun run lint && bun run typecheck && bun run build",
+    "lint": "oxlint .",
+    "format": "oxfmt . --write",
+    "format:check": "oxfmt . --check",
+    "typecheck": "bunx tsc --project apps/server/tsconfig.json && bunx tsc --project apps/client/tsconfig.json && bunx tsc --project packages/auth/tsconfig.json && bunx tsc --project packages/db/tsconfig.json && bunx tsc --project packages/ui/tsconfig.json",
+    "build": "bun run --filter @analytics/client build",
+    "dev:server": "bun run --filter @analytics/server dev",
+    "dev:client": "bun run --filter @analytics/client dev",
+    "db:up": "docker compose -f docker-compose.dev.yml up -d",
+    "db:generate": "bun run --filter @analytics/db db:generate",
+    "db:migrate": "bun run --filter @analytics/db db:migrate",
+    "magic-link": "docker compose logs --since 20m server | grep -A2 'Magic link'"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "lefthook": "^2.1.10",
+    "oxfmt": "^0.60.0",
+    "oxlint": "^1.75.0"
+  }
+}

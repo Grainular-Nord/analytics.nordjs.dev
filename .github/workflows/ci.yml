@@ -1,0 +1,122 @@
+name: Verify and deploy
+
+on:
+    pull_request:
+    push:
+        branches: [main]
+
+permissions:
+    contents: read
+    packages: write
+
+concurrency:
+    group: analytics-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    verify:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: 1.3.14
+            - run: bun install --frozen-lockfile
+            - run: bun run format:check
+            - run: bun run lint
+            - run: bun run typecheck
+            - name: Build client
+              env:
+                  VITE_API_URL: ${{ vars.ANALYTICS_API_URL }}
+                  VITE_APP_TITLE: ${{ vars.ANALYTICS_APP_TITLE }}
+              run: |
+                  test -n "$VITE_API_URL"
+                  test -n "$VITE_APP_TITLE"
+                  bun run build
+            - uses: actions/upload-artifact@v4
+              if: github.event_name == 'push'
+              with:
+                  name: client-dist
+                  path: apps/client/dist
+                  if-no-files-found: error
+
+    deploy:
+        needs: verify
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        environment: production
+        env:
+            SERVER_IMAGE: ghcr.io/${{ github.repository_owner }}/analytics-server:${{ github.sha }}
+            DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+            DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+            DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+            SERVER_PATH: ${{ vars.SERVER_PATH }}
+            RUNTIME_ENV_PATH: ${{ vars.RUNTIME_ENV_PATH }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Build and publish API image
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: apps/server/Dockerfile
+                  push: true
+                  tags: ${{ env.SERVER_IMAGE }}
+            - name: Configure SSH
+              env:
+                  SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+                  SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+              run: |
+                  install -m 700 -d ~/.ssh
+                  printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+                  chmod 600 ~/.ssh/id_ed25519
+                  printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+                  chmod 600 ~/.ssh/known_hosts
+            - name: Validate deployment configuration
+              env:
+                  DEPLOY_HOST: ${{ env.DEPLOY_HOST }}
+                  DEPLOY_USER: ${{ env.DEPLOY_USER }}
+                  DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+                  SERVER_PATH: ${{ env.SERVER_PATH }}
+                  RUNTIME_ENV_PATH: ${{ env.RUNTIME_ENV_PATH }}
+              run: |
+                  set -eu
+                  require_value() {
+                      if [ -z "$2" ]; then
+                          echo "$1 is required."
+                          exit 1
+                      fi
+                  }
+                  require_path() {
+                      require_value "$1" "$2"
+                      if [ "$2" = "/" ]; then
+                          echo "$1 must not point at the server root."
+                          exit 1
+                      fi
+                  }
+                  require_value DEPLOY_HOST "$DEPLOY_HOST"
+                  require_value DEPLOY_USER "$DEPLOY_USER"
+                  require_path DEPLOY_PATH "$DEPLOY_PATH"
+                  require_path SERVER_PATH "$SERVER_PATH"
+                  require_path RUNTIME_ENV_PATH "$RUNTIME_ENV_PATH"
+            - uses: actions/download-artifact@v4
+              with:
+                  name: client-dist
+                  path: dist
+            - name: Render Compose configuration
+              run: >-
+                  sed "s|image: \"\${SERVER_IMAGE:-analytics-server}\"|image: \"${SERVER_IMAGE}\"|"
+                  docker-compose.yml > compose.yml
+            - name: Deploy Compose configuration
+              run: rsync -az compose.yml "$DEPLOY_USER@$DEPLOY_HOST:$SERVER_PATH/compose.yml"
+            - name: Update API
+              run: >-
+                  ssh "$DEPLOY_USER@$DEPLOY_HOST"
+                  "docker compose --env-file \"$RUNTIME_ENV_PATH\" -f \"$SERVER_PATH/compose.yml\" pull server && docker compose --env-file \"$RUNTIME_ENV_PATH\" -f \"$SERVER_PATH/compose.yml\" up -d --remove-orphans"
+            - name: Deploy static client
+              run: rsync -az --delete dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"

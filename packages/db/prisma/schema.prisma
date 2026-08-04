@@ -1,0 +1,120 @@
+generator client {
+    provider = "prisma-client"
+    output   = "../generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+// -- Dashboard users (the only personal data in the system) --
+
+model User {
+    id              String           @id @default(cuid())
+    email           String           @unique
+    createdAt       DateTime         @default(now())
+    credentials     Credential[]
+    siteMemberships SiteMembership[]
+}
+
+// A WebAuthn passkey registered by a user
+model Credential {
+    id         String   @id // base64url credential id
+    userId     String
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    publicKey  Bytes
+    counter    BigInt   @default(0)
+    transports String[] @default([])
+    label      String?
+    createdAt  DateTime @default(now())
+
+    @@index([userId])
+}
+
+model MagicLinkToken {
+    // sha256 hash of the token — the raw token only ever exists
+    // in the server console and the user's browser
+    tokenHash String    @id
+    email     String
+    expiresAt DateTime
+    usedAt    DateTime?
+    createdAt DateTime  @default(now())
+}
+
+// -- Tracked sites --
+
+model Site {
+    id             String              @id @default(cuid())
+    // Public site key used by the beacon; safe to expose
+    key            String              @unique @default(cuid())
+    name           String
+    domain         String
+    // Origins allowed to send events for this site
+    allowedOrigins String[]            @default([])
+    createdAt      DateTime            @default(now())
+    events         Event[]
+    pageStats      DailyPageStat[]
+    referrerStats  DailyReferrerStat[]
+    memberships    SiteMembership[]
+}
+
+// Access to a site is explicit. New sites get one OWNER membership; teams
+// can later add EDITOR and VIEWER memberships without exposing other sites.
+enum SiteRole {
+    OWNER
+    EDITOR
+    VIEWER
+}
+
+model SiteMembership {
+    siteId    String
+    userId    String
+    role      SiteRole @default(OWNER)
+    site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now())
+
+    @@id([siteId, userId])
+    @@index([userId])
+}
+
+// -- Events: deliberately anonymous. No IP, no UA, no visitor id. --
+
+model Event {
+    id        Int      @id @default(autoincrement())
+    siteId    String
+    site      Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    // Pathname only — query strings and hashes are stripped at ingest
+    path      String
+    // Referrer origin only (e.g. "https://news.ycombinator.com"), null for direct
+    referrer  String?
+    timestamp DateTime @default(now())
+
+    @@index([siteId, timestamp])
+    @@index([siteId, path, timestamp])
+}
+
+// -- Rollups: events older than the retention window are compacted here --
+
+model DailyPageStat {
+    siteId String
+    site   Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    date   DateTime @db.Date
+    path   String
+    views  Int      @default(0)
+
+    @@id([siteId, date, path])
+    @@index([siteId, date])
+}
+
+model DailyReferrerStat {
+    siteId   String
+    site     Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+    date     DateTime @db.Date
+    path     String
+    referrer String
+    views    Int      @default(0)
+
+    @@id([siteId, date, path, referrer])
+    @@index([siteId, date])
+}

@@ -1,0 +1,39 @@
+services:
+    postgres:
+        image: postgres:17-alpine
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: analytics
+            POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the runtime environment}'
+            POSTGRES_DB: analytics
+        volumes:
+            - postgres-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U analytics']
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+    server:
+        # CI renders this template with an immutable image tag before deployment.
+        image: '${SERVER_IMAGE:-analytics-server}'
+        restart: unless-stopped
+        depends_on:
+            postgres:
+                condition: service_healthy
+        environment:
+            NODE_ENV: production
+            DATABASE_URL: 'postgresql://analytics:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the runtime environment}@postgres:5432/analytics'
+            JWT_SECRET: '${JWT_SECRET:?Set JWT_SECRET in the runtime environment}'
+            CLIENT_ORIGINS: '${CLIENT_ORIGINS:?Set CLIENT_ORIGINS in the runtime environment}'
+            CLIENT_URL: '${CLIENT_URL:?Set CLIENT_URL in the runtime environment}'
+            RP_ID: '${RP_ID:?Set RP_ID in the runtime environment}'
+            RP_NAME: '${RP_NAME:-Analytics}'
+            RETENTION_DAYS: '${RETENTION_DAYS:-90}'
+            PORT: '${API_PORT:-3000}'
+        ports:
+            # Caddy on the host proxies to this loopback-only port.
+            - '127.0.0.1:${API_PORT:-3000}:${API_PORT:-3000}'
+
+volumes:
+    postgres-data:

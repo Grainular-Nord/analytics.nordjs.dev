@@ -1,0 +1,25 @@
+# Local-dev-only Postgres, used by `bun run db:up` alongside the bare
+# `bun run dev:server` / `bun run dev:client` processes (see apps/server/.env
+# and apps/client/.env for the matching client config). Self-contained on
+# purpose — no root .env file needed, unlike docker-compose.yml which is the
+# production stack driven by the server-only runtime environment file.
+services:
+    postgres:
+        image: postgres:17-alpine
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: analytics
+            POSTGRES_PASSWORD: analytics
+            POSTGRES_DB: analytics
+        ports:
+            - '127.0.0.1:5433:5432'
+        volumes:
+            - postgres-dev-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U analytics']
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+volumes:
+    postgres-dev-data:

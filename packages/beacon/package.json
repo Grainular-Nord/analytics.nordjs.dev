@@ -1,0 +1,8 @@
+{
+  "name": "@analytics/beacon-source",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Anonymous, cookie-free page-view beacon for nordjs analytics. No cookies, no IDs, no client-side storage.",
+  "license": "MIT",
+  "type": "module"
+}
