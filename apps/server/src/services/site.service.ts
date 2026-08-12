@@ -1,6 +1,7 @@
 import { prisma, type SiteRole } from '@analytics/db';
 import { HTTPException } from 'hono/http-exception';
 import { invalidateSiteCache } from './event.service';
+import { invalidatePublicDashboardCache } from './public-dashboard.service';
 
 const normalizeOrigins = (origins: unknown): string[] => {
     if (!Array.isArray(origins)) return [];
@@ -45,15 +46,6 @@ export const getSite = async (id: string, userId: string, roles?: SiteRole[]) =>
     return site;
 };
 
-// The public overview deliberately exposes only the name required to label
-// each chart. Site configuration and membership data remain private.
-export const listPublicDashboardSites = () =>
-    prisma.site.findMany({
-        where: { isPublic: true },
-        orderBy: { createdAt: 'asc' },
-        select: { id: true, name: true },
-    });
-
 export const createSite = async (
     userId: string,
     input: { name?: unknown; domain?: unknown; allowedOrigins?: unknown },
@@ -63,7 +55,7 @@ export const createSite = async (
         throw new HTTPException(400, { message: 'Name and domain are required' });
     }
 
-    return prisma.site.create({
+    const site = await prisma.site.create({
         data: {
             name: name.trim(),
             domain: domain.trim().toLowerCase(),
@@ -71,6 +63,8 @@ export const createSite = async (
             memberships: { create: { userId, role: 'OWNER' } },
         },
     });
+    invalidatePublicDashboardCache();
+    return site;
 };
 
 export const updateSite = async (
@@ -95,6 +89,7 @@ export const updateSite = async (
     });
 
     invalidateSiteCache();
+    invalidatePublicDashboardCache();
     return site;
 };
 
@@ -102,4 +97,5 @@ export const deleteSite = async (id: string, userId: string) => {
     await getSite(id, userId, ['OWNER']);
     await prisma.site.delete({ where: { id } });
     invalidateSiteCache();
+    invalidatePublicDashboardCache();
 };

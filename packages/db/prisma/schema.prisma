@@ -94,6 +94,7 @@ model Event {
 
     @@index([siteId, timestamp])
     @@index([siteId, path, timestamp])
+    @@index([timestamp])
 }
 
 // -- Rollups: events older than the retention window are compacted here --
@@ -107,6 +108,7 @@ model DailyPageStat {
 
     @@id([siteId, date, path])
     @@index([siteId, date])
+    @@index([date])
 }
 
 model DailyReferrerStat {
@@ -119,4 +121,5 @@ model DailyReferrerStat {
 
     @@id([siteId, date, path, referrer])
     @@index([siteId, date])
+    @@index([date])
 }
