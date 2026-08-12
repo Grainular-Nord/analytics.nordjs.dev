@@ -1,4 +1,4 @@
-import { combined, derived } from '@grainular/grains';
+import { derived } from '@grainular/grains';
 import { resource } from '@grainular/resource';
 import { query, unwrap } from '../../../core/services/query';
 
@@ -14,9 +14,10 @@ const dashboardResource = resource<PublicSiteDashboard[]>(({ abortSignal }) =>
 
 export const publicDashboardStore = {
     state: {
-        sites: derived(combined([dashboardResource.data, dashboardResource.pending]), ([data, pending]) =>
-            pending ? [] : (data ?? []),
-        ),
+        // Preserve the previous result during refreshes. An empty list should
+        // mean that the request completed with no public sites, not merely
+        // that a route revisit started another request.
+        sites: derived(dashboardResource.data, (data) => data ?? []),
         loading: dashboardResource.pending,
         error: dashboardResource.error,
     },
