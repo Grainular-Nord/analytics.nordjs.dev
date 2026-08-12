@@ -11,7 +11,7 @@ export default () => {
             <p class="mt-1 text-sm text-ink-muted">Anonymous, aggregate-only page analytics.</p>
         </div>
 
-        ${SigninForm({ class: 'w-full max-w-md', store: authStore, onSignedIn: () => navigate('/') })}
+        ${SigninForm({ class: 'w-full max-w-md', store: authStore, onSignedIn: () => navigate('/dashboard') })}
 
         <p class="max-w-sm text-center text-xs text-ink-muted">
             No account yet? Request a magic link — signup happens on first use. Links are only visible in the server

@@ -49,6 +49,8 @@ model Site {
     key            String              @unique @default(cuid())
     name           String
     domain         String
+    // Sites appear in the public overview only after their owner opts in.
+    isPublic       Boolean             @default(false)
     // Origins allowed to send events for this site
     allowedOrigins String[]            @default([])
     createdAt      DateTime            @default(now())

@@ -3,6 +3,7 @@ import { authRoutes } from './lib/auth';
 import { handleCors, handleIngestCors } from './middlewares/cors.middleware';
 import { exceptionFilter } from './middlewares/exception-filter.middleware';
 import { eventRoutes } from './routes/event.routes';
+import { publicDashboardRoutes } from './routes/public-dashboard.routes';
 import { siteRoutes } from './routes/site.routes';
 import { statsRoutes } from './routes/stats.routes';
 
@@ -18,6 +19,7 @@ const app = new Hono()
     // Dashboard API, restricted to the SPA origins
     .use('*', handleCors())
     .route('/auth', authRoutes)
+    .route('/dashboard', publicDashboardRoutes)
     .route('/sites', siteRoutes)
     .route('/stats', statsRoutes)
 

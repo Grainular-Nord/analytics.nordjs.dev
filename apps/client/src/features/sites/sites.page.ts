@@ -114,7 +114,7 @@ export default () => {
     return Container({
         class: 'flex flex-col gap-6',
         children: html`${PageHeader({
-            back: { href: '/', label: 'Dashboard' },
+            back: { href: '/dashboard', label: 'Dashboard' },
             title: 'Manage sites',
             description: 'Every site sending events to this instance.',
         })}
