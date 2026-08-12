@@ -1,4 +1,4 @@
-import { combined, derived } from '@grainular/grains';
+import { derived } from '@grainular/grains';
 import { resource } from '@grainular/resource';
 import { as, query, unwrap } from '../../../core/services/query';
 import type { SiteSummary } from '../../sites/store/sites.store';
@@ -30,9 +30,9 @@ const overviewResource = resource<SiteOverview[]>(async ({ abortSignal }) => {
 
 export const summaryStore = {
     state: {
-        overviews: derived(combined([overviewResource.data, overviewResource.pending]), ([data, pending]) =>
-            pending ? [] : (data ?? []),
-        ),
+        // Keep a settled overview visible during a refresh so the empty state
+        // only represents an authenticated account with no sites.
+        overviews: derived(overviewResource.data, (data) => data ?? []),
         loading: overviewResource.pending,
         error: overviewResource.error,
     },
