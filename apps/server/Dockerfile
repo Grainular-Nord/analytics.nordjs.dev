@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS base
+FROM oven/bun:1.3.14-slim AS base
 WORKDIR /app
 
 # Build context is the repo root — copy workspace manifests first for layer
@@ -12,14 +12,13 @@ COPY packages/ui/package.json ./packages/ui/package.json
 COPY packages/beacon/package.json ./packages/beacon/package.json
 COPY apps/server/package.json ./apps/server/package.json
 COPY apps/client/package.json ./apps/client/package.json
-# Prisma is needed both to generate the client at build time and to apply
-# migrations at container startup, so it must be present in the runtime image.
+# Only runtime packages are installed. Prisma is intentionally a production
+# dependency of @analytics/db because migrations run when this container starts.
 # Skip repository lifecycle scripts: Lefthook is for local Git checkouts only.
-RUN bun install --frozen-lockfile --ignore-scripts
+RUN bun install --production --frozen-lockfile --ignore-scripts
 
 COPY packages/db ./packages/db
 COPY packages/auth ./packages/auth
-COPY packages/ui ./packages/ui
 COPY apps/server ./apps/server
 
 # Generation does not connect to Postgres, but the Prisma config requires a

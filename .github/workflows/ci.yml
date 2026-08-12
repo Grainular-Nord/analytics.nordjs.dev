@@ -126,6 +126,6 @@ jobs:
             - name: Update API
               run: >-
                   ssh "$DEPLOY_USER@$DEPLOY_HOST"
-                  "docker compose --env-file \"$RUNTIME_ENV_PATH\" -f \"$SERVER_PATH/compose.yml\" pull server && docker compose --env-file \"$RUNTIME_ENV_PATH\" -f \"$SERVER_PATH/compose.yml\" up -d --remove-orphans"
+                  "docker compose --env-file \"$RUNTIME_ENV_PATH\" -f \"$SERVER_PATH/compose.yml\" pull server && docker compose --env-file \"$RUNTIME_ENV_PATH\" -f \"$SERVER_PATH/compose.yml\" up -d --wait --remove-orphans && docker image prune -af"
             - name: Deploy static client
               run: rsync -az --delete dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
