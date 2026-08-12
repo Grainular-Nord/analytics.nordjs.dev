@@ -4,6 +4,7 @@ import { $if, html } from '@grainular/nord';
 import { SiteBeaconCard } from './components/site-beacon-card';
 import { SiteDangerZone } from './components/site-danger-zone';
 import { SiteOriginsCard } from './components/site-origins-card';
+import { SiteVisibilityCard } from './components/site-visibility-card';
 import { siteSettingsStore } from './store/site-settings.store';
 import type { Site } from './store/sites.store';
 
@@ -27,6 +28,7 @@ const SiteSettingsContent = ({ site, message }: SiteSettingsContentOptions) => {
         )}
         ${SiteBeaconCard({ site, onMessage: message.set })}
         ${SiteOriginsCard({ site: current, onMessage: message.set })}
+        ${SiteVisibilityCard({ site: current, onMessage: message.set })}
         ${SiteDangerZone({ site: current, onMessage: message.set })}
     </div>`;
 };

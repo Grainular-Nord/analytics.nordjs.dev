@@ -8,6 +8,7 @@ export type SiteSummary = { id: string; name: string; domain: string };
 export type Site = SiteSummary & {
     key: string;
     allowedOrigins: string[];
+    isPublic: boolean;
     createdAt: string;
 };
 
@@ -28,7 +29,10 @@ const createSite = async (input: { name: string; domain: string; allowedOrigins:
     return response;
 };
 
-const updateSite = async (siteId: string, input: Partial<Pick<Site, 'name' | 'domain' | 'allowedOrigins'>>) => {
+const updateSite = async (
+    siteId: string,
+    input: Partial<Pick<Site, 'name' | 'domain' | 'allowedOrigins' | 'isPublic'>>,
+) => {
     const response = await query(`/sites/${siteId}`, { method: 'PATCH', body: JSON.stringify(input) }, as<Site>);
     if (response.ok) sitesResource.refresh();
     return response;

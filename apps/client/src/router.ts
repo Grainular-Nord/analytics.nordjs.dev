@@ -8,6 +8,17 @@ import { sitesStore } from './features/sites/store/sites.store';
 export const { query, params, ...router } = createRouter('/', [
     {
         path: '/',
+        component: () => import('./features/public-dashboard/public-dashboard.page'),
+        use: [
+            load(async () => {
+                const { publicDashboardStore } =
+                    await import('./features/public-dashboard/store/public-dashboard.store');
+                publicDashboardStore.actions.load();
+            }),
+        ],
+    },
+    {
+        path: '/dashboard',
         component: () => import('./features/summary/summary.page'),
         use: [
             isLoggedIn(),

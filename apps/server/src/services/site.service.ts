@@ -45,6 +45,15 @@ export const getSite = async (id: string, userId: string, roles?: SiteRole[]) =>
     return site;
 };
 
+// The public overview deliberately exposes only the name required to label
+// each chart. Site configuration and membership data remain private.
+export const listPublicDashboardSites = () =>
+    prisma.site.findMany({
+        where: { isPublic: true },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, name: true },
+    });
+
 export const createSite = async (
     userId: string,
     input: { name?: unknown; domain?: unknown; allowedOrigins?: unknown },
@@ -67,9 +76,11 @@ export const createSite = async (
 export const updateSite = async (
     id: string,
     userId: string,
-    input: { name?: unknown; domain?: unknown; allowedOrigins?: unknown },
+    input: { name?: unknown; domain?: unknown; allowedOrigins?: unknown; isPublic?: unknown },
 ) => {
-    await getSite(id, userId, ['OWNER', 'EDITOR']);
+    // Publishing a dashboard makes aggregate traffic visible outside the
+    // membership boundary, so only the site owner may change this setting.
+    await getSite(id, userId, typeof input.isPublic === 'boolean' ? ['OWNER'] : ['OWNER', 'EDITOR']);
 
     const site = await prisma.site.update({
         where: { id },
@@ -79,6 +90,7 @@ export const updateSite = async (
                 ? { domain: input.domain.trim().toLowerCase() }
                 : {}),
             ...(input.allowedOrigins !== undefined ? { allowedOrigins: normalizeOrigins(input.allowedOrigins) } : {}),
+            ...(typeof input.isPublic === 'boolean' ? { isPublic: input.isPublic } : {}),
         },
     });
 
